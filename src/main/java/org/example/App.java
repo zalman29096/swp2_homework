@@ -33,7 +33,7 @@ public class App {
             NumberFormat nf = NumberFormat.getNumberInstance(locale);
             nf.setMinimumFractionDigits(2);
             nf.setMaximumFractionDigits(2);
-            String itemTotalMsg = MessageFormat.format(bundle.getString("output.itemTotal"), i, nf.format(itemTotal));
+            String itemTotalMsg = MessageFormat.format(bundle.getString("output.total"), nf.format(itemTotal));
             System.out.println(itemTotalMsg);
         }
 
@@ -41,7 +41,7 @@ public class App {
         NumberFormat nf = NumberFormat.getNumberInstance(locale);
         nf.setMinimumFractionDigits(2);
         nf.setMaximumFractionDigits(2);
-        System.out.println(MessageFormat.format(bundle.getString("output.cartTotal"), nf.format(cartTotal)));
+        System.out.println(MessageFormat.format(bundle.getString("output.total"), nf.format(cartTotal)));
     }
 
     private static Locale selectLocale() {
@@ -52,7 +52,8 @@ public class App {
         try {
             String line = scanner.nextLine();
             choice = Integer.parseInt(line.trim());
-        } catch (Exception ignored) { }
+        } catch (Exception ignored) {
+        }
 
         return switch (choice) {
             case 2 -> new Locale("fi", "FI");
@@ -70,16 +71,12 @@ public class App {
         while (true) {
             System.out.println(prompt);
             String line = scanner.nextLine();
-            try {
-                int value = Integer.parseInt(line.trim());
-                if (value < 0) {
-                    System.out.println(bundle.getString("error.nonNegative"));
-                    continue;
-                }
-                return value;
-            } catch (NumberFormatException ex) {
-                System.out.println(bundle.getString("error.invalidInteger"));
+            int value = Integer.parseInt(line.trim());
+            if (value < 0) {
+                throw new NumberFormatException("Number should not be negative");
             }
+            return value;
+
         }
     }
 
@@ -87,16 +84,12 @@ public class App {
         while (true) {
             System.out.println(prompt);
             String line = scanner.nextLine();
-            try {
-                double value = Double.parseDouble(line.trim());
-                if (value < 0) {
-                    System.out.println(bundle.getString("error.nonNegative"));
-                    continue;
-                }
-                return value;
-            } catch (NumberFormatException ex) {
-                System.out.println(bundle.getString("error.invalidNumber"));
+            double value = Double.parseDouble(line.trim());
+            if (value < 0) {
+                throw new NumberFormatException("Number should not be negative");
             }
+            return value;
+
         }
     }
 
