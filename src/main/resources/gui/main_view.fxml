@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml" fx:controller="org.example.gui.MainController" spacing="10" prefWidth="820.0" prefHeight="560.0">
+    <padding><Insets top="12" right="12" bottom="12" left="12"/></padding>
+
+    <!-- Language selection -->
+    <HBox spacing="8">
+        <children>
+            <Label fx:id="lblLanguage" text="Language"/>
+            <ComboBox fx:id="languageBox" prefWidth="200"/>
+        </children>
+    </HBox>
+
+    <!-- Number of items and generate button -->
+    <HBox spacing="8">
+        <children>
+            <Label fx:id="lblNumItems" text="Number of items"/>
+            <TextField fx:id="numItemsField" promptText="0" HBox.hgrow="ALWAYS"/>
+            <Button fx:id="btnGenerate" text="Generate"/>
+        </children>
+    </HBox>
+
+    <!-- Items area -->
+    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+        <content>
+            <VBox fx:id="itemsBox" spacing="8"/>
+        </content>
+    </ScrollPane>
+
+    <!-- Calculate and total -->
+    <HBox spacing="8">
+        <children>
+            <Button fx:id="btnCalculate" text="Calculate"/>
+            <Label fx:id="lblOverallTotal" text="Total: 0.00"/>
+        </children>
+    </HBox>
+</VBox>
