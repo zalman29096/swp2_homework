@@ -10,6 +10,8 @@ import javafx.scene.layout.VBox;
 import org.example.App;
 import org.example.ShoppingCartCalculator;
 import org.example.model.Item;
+import org.example.service.LocalizationService;
+import org.example.service.CartService;
 
 import java.text.MessageFormat;
 import java.text.NumberFormat;
@@ -28,12 +30,14 @@ public class MainController {
 
     private StageAware stageAware = new StageAware();
     private Locale currentLocale = Locale.US;
-    private ResourceBundle bundle = ResourceBundle.getBundle("Translations", currentLocale, new App.UTF8Control());
+    private final LocalizationService localizationService = new LocalizationService();
+    private Map<String,String> i18n = new HashMap<>();
+    private final CartService cartService = new CartService();
 
     void setStage(javafx.stage.Stage stage) { this.stageAware.stage = stage; }
     void setInitialLocale(Locale locale) {
         this.currentLocale = locale;
-        this.bundle = ResourceBundle.getBundle("Translations", currentLocale, new App.UTF8Control());
+        this.i18n = localizationService.loadStrings(currentLocale);
         applyI18n();
     }
 
@@ -61,13 +65,8 @@ public class MainController {
 
     private void switchLocale(Locale locale) {
         this.currentLocale = locale;
-        try {
-            this.bundle = ResourceBundle.getBundle("Translations", currentLocale, new App.UTF8Control());
-        } catch (MissingResourceException ex) {
-            
-            this.currentLocale = Locale.US;
-            this.bundle = ResourceBundle.getBundle("Translations", currentLocale, new App.UTF8Control());
-        }
+        System.out.println(this.currentLocale);
+        this.i18n = localizationService.loadStrings(currentLocale);
         applyI18n();
     }
 
@@ -98,10 +97,10 @@ public class MainController {
     }
 
     private Node buildItemRow(int index) {
-        Label priceLbl = new Label(MessageFormat.format(getOrDefault("prompt.itemPrice", "Price for item {0}"), index));
+        Label priceLbl = new Label(MessageFormat.format(s("prompt.itemPrice", "Price for item {0}"), index));
         TextField priceField = new TextField();
         priceField.setPromptText(s("gui.price", "Price"));
-        Label qtyLbl = new Label(MessageFormat.format(getOrDefault("prompt.itemQty", "Quantity for item {0}"), index));
+        Label qtyLbl = new Label(MessageFormat.format(s("prompt.itemQty", "Quantity for item {0}"), index));
         TextField qtyField = new TextField();
         qtyField.setPromptText(s("gui.quantity", "Quantity"));
         Label itemTotalLbl = new Label(s("gui.itemTotal", "Item total") + ": 0.00");
@@ -121,7 +120,7 @@ public class MainController {
             NumberFormat nf = NumberFormat.getNumberInstance(currentLocale);
             nf.setMinimumFractionDigits(2);
             nf.setMaximumFractionDigits(2);
-            String msg = MessageFormat.format(getOrDefault("output.total", "Total cost: {0}"), nf.format(total));
+            String msg = MessageFormat.format(s("output.total", "Total cost: {0}"), nf.format(total));
             itemTotalLbl.setText(msg);
             
         };
@@ -133,6 +132,7 @@ public class MainController {
 
     private void calculateTotals() {
         double overall = 0.0;
+        List<Item> items = new ArrayList<>();
         for (Node node : itemsBox.getChildren()) {
             if (node instanceof HBox row) {
                 
@@ -146,11 +146,17 @@ public class MainController {
                 if (priceField != null && qtyField != null) {
                     double price = Math.max(0.0, parseDoubleSafe(priceField.getText(), 0.0));
                     int qty = Math.max(0, parseIntSafe(qtyField.getText(), 0));
-                    overall += ShoppingCartCalculator.calculateItemTotal(new Item(price, qty));
+                    Item item = new Item(price, qty);
+                    items.add(item);
+                    overall += ShoppingCartCalculator.calculateItemTotal(item);
                 }
             }
         }
         setOverallTotal(overall);
+        // Persist the calculation (best-effort)
+        try {
+            cartService.saveCart(items.size(), overall, currentLocale, items);
+        } catch (Exception ignored) { }
     }
 
     private void setOverallTotal(double value) {
@@ -158,7 +164,7 @@ public class MainController {
         NumberFormat nf = NumberFormat.getNumberInstance(currentLocale);
         nf.setMinimumFractionDigits(2);
         nf.setMaximumFractionDigits(2);
-        String msg = MessageFormat.format(getOrDefault("output.total", "Total cost: {0}"), nf.format(value));
+        String msg = MessageFormat.format(s("output.total", "Total cost: {0}"), nf.format(value));
         lblOverallTotal.setText(msg);
     }
 
@@ -171,9 +177,9 @@ public class MainController {
                 for (Node child : row.getChildren()) {
                     if (child instanceof Label lbl) {
                         if (labelIdx == 0) {
-                            lbl.setText(MessageFormat.format(getOrDefault("prompt.itemPrice", "Price for item {0}"), index + 1));
+                            lbl.setText(MessageFormat.format(s("prompt.itemPrice", "Price for item {0}"), index + 1));
                         } else if (labelIdx == 2) { 
-                            lbl.setText(MessageFormat.format(getOrDefault("prompt.itemQty", "Quantity for item {0}"), index + 1));
+                            lbl.setText(MessageFormat.format(s("prompt.itemQty", "Quantity for item {0}"), index + 1));
                         } else if (labelIdx == 4) {
                             
                             Object data = lbl.getUserData();
@@ -181,7 +187,7 @@ public class MainController {
                             NumberFormat nf = NumberFormat.getNumberInstance(currentLocale);
                             nf.setMinimumFractionDigits(2);
                             nf.setMaximumFractionDigits(2);
-                            String msg = MessageFormat.format(getOrDefault("output.total", "Total cost: {0}"), nf.format(val));
+                            String msg = MessageFormat.format(s("output.total", "Total cost: {0}"), nf.format(val));
                             lbl.setText(msg);
                         }
                         labelIdx++;
@@ -200,20 +206,11 @@ public class MainController {
     }
 
     private String s(String key, String deflt) {
-        try {
-            return bundle.getString(key);
-        } catch (MissingResourceException e) {
-            return deflt;
-        }
+        String v = i18n.get(key);
+        if (v != null) return v;
+        return deflt;
     }
 
-    private String getOrDefault(String key, String deflt) {
-        try {
-            return bundle.getString(key);
-        } catch (MissingResourceException e) {
-            return deflt;
-        }
-    }
 
     private static int parseIntSafe(String s, int def) {
         try {

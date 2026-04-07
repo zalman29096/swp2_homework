@@ -1,6 +1,8 @@
 package org.example;
 
 import org.example.model.Item;
+import org.example.service.LocalizationService;
+import org.example.service.CartService;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,16 +16,19 @@ public class App {
     public static void main(String[] args) {
         Locale locale = selectLocale();
         ResourceBundle bundle = getBundle(locale);
+        LocalizationService localizationService = new LocalizationService();
+        Map<String,String> i18n = localizationService.loadStrings(locale);
+        CartService cartService = new CartService();
         Scanner scanner = new Scanner(System.in, StandardCharsets.UTF_8);
 
-        int numItems = readNonNegativeInt(scanner, bundle.getString("prompt.numItems"), bundle);
+        int numItems = readNonNegativeInt(scanner, getOrDefault(i18n, bundle, "prompt.numItems", "Enter the number of items to purchase:"), bundle);
 
         List<Item> items = new ArrayList<>();
         for (int i = 1; i <= numItems; i++) {
-            String pricePrompt = MessageFormat.format(bundle.getString("prompt.itemPrice"), i);
+            String pricePrompt = MessageFormat.format(getOrDefault(i18n, bundle, "prompt.itemPrice", "Enter the price for item {0}:"), i);
             double price = readNonNegativeDouble(scanner, pricePrompt, bundle);
 
-            String qtyPrompt = MessageFormat.format(bundle.getString("prompt.itemQty"), i);
+            String qtyPrompt = MessageFormat.format(getOrDefault(i18n, bundle, "prompt.itemQty", "Enter the quantity for item {0}:"), i);
             int qty = readNonNegativeInt(scanner, qtyPrompt, bundle);
 
             Item item = new Item(price, qty);
@@ -33,7 +38,7 @@ public class App {
             NumberFormat nf = NumberFormat.getNumberInstance(locale);
             nf.setMinimumFractionDigits(2);
             nf.setMaximumFractionDigits(2);
-            String itemTotalMsg = MessageFormat.format(bundle.getString("output.total"), nf.format(itemTotal));
+            String itemTotalMsg = MessageFormat.format(getOrDefault(i18n, bundle, "output.total", "Total cost: {0}"), nf.format(itemTotal));
             System.out.println(itemTotalMsg);
         }
 
@@ -41,7 +46,12 @@ public class App {
         NumberFormat nf = NumberFormat.getNumberInstance(locale);
         nf.setMinimumFractionDigits(2);
         nf.setMaximumFractionDigits(2);
-        System.out.println(MessageFormat.format(bundle.getString("output.total"), nf.format(cartTotal)));
+        System.out.println(MessageFormat.format(getOrDefault(i18n, bundle, "output.total", "Total cost: {0}"), nf.format(cartTotal)));
+
+        // Persist calculations (best-effort)
+        try {
+            cartService.saveCart(items.size(), cartTotal, locale, items);
+        } catch (Exception ignored) { }
     }
 
     private static Locale selectLocale() {
@@ -103,6 +113,16 @@ public class App {
                 if (stream == null) return null;
                 return new PropertyResourceBundle(new java.io.InputStreamReader(stream, StandardCharsets.UTF_8));
             }
+        }
+    }
+
+    private static String getOrDefault(Map<String,String> map, ResourceBundle bundle, String key, String deflt) {
+        String v = map.get(key);
+        if (v != null) return v;
+        try {
+            return bundle.getString(key);
+        } catch (MissingResourceException e) {
+            return deflt;
         }
     }
 }
